@@ -1,0 +1,30 @@
+{
+  "name": "regular-branch-creator",
+  "version": "0.3.1",
+  "description": "Tool for creating a new formal regular git branch",
+  "main": "index.js",
+  "bin": {
+    "rbc": "bin/rbc.js"
+  },
+  "dependencies": {
+    "chalk": "^2.1.0",
+    "co": "^4.6.0",
+    "commander": "^2.11.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:LeonDWong/regular-branch-creator.git"
+  },
+  "keywords": [
+    "branch"
+  ],
+  "engines": {
+    "node": ">=4.6.2"
+  },
+  "author": "leondowng",
+  "license": "ISC"
+}
