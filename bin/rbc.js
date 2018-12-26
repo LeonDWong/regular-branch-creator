@@ -61,15 +61,19 @@ commander
   .command('delete [name]')
   .description(DESC_DELETE)
   .option('-m, --master [branch]', 'master branch name, master as default')
+  .option('-s, --strict', 'strict mode for matching specific branch')
   .action((name, options) => {
     const MASTER_NAME = options.master || 'master';
+    const STRICT_MODE = options.strict || false;
 
     if (!name) {
       console.error(chalk.red(`[error]: lack of project name`));
       return;
     }
 
-    const nameReg = new RegExp(`^feature/.*${name}.*_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]+$`);
+    const nameReg = STRICT_MODE
+      ? new RegExp(`^feature/${name}_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]+$`)
+      : new RegExp(`^feature/.*${name}.*_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]+$`);
     let cmdScript = `git branch`;
 
     const isBranchExist = new Promise((res, rej) => {
@@ -134,7 +138,14 @@ commander
           return;
         }
 
-        console.log(chalk.red('only one branch can be matched, please try again with a more accuracy project name.'))
+        const branchList = branches.join('\n');
+
+        console.log(chalk.red(
+          'Only one branch should be matched, please try again with a more accuracy project name.' +
+          '\nOr you can try strict mode by adding --strict.' +
+          '\nMatched branch list shows below: ' +
+          '\n' + branchList
+        ));
       })
   });
 
