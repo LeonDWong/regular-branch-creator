@@ -8,7 +8,8 @@ const co = require('co');
 const pkg = require('../package.json');
 const utils = require('../lib/utils');
 
-const CMD_CHECKOUT_MASTER = 'git checkout master';
+const CMD_CHECKOUT_MASTER = 'git checkout';
+const CMD_PULL_MASTER = 'git pull origin';
 const DESC_CREATE = 'input the name of your project, then it will generate a branch such as feature/{name}_{YYYY-MM-DD}_{TimeStamp}';
 const DESC_DELETE = 'input the name of your project, branch feature/{name}_{YYYY-MM-DD}_{TimeStamp} will be removed and push a new tag which is tags/{name}_{YY-MM-DD}_{TimeStamp}';
 const DESC_CLEAN = 'remove all local branch is not exist in remote branch anymore';
@@ -18,9 +19,9 @@ commander
   .version(pkg.version)
   .command('create [name]')
   .description(DESC_CREATE)
-  .action((...args) => {
-    const name = args[0];
-    const MASTER_NAME = 'master';
+  .option('-m, --master [branch]', 'master branch name, master as default')
+  .action((name, options) => {
+    const MASTER_NAME = options.master || 'master';
 
     if (!name) {
       console.error(chalk.red(`[error]: lack of project name`));
@@ -36,11 +37,11 @@ commander
         let cmdScript = `${createBranchCmd} && ${pushBranchCmd}`;
 
         if (!isMaster) {
-          const warning_copy = `[warning] new project branch should be forked by branch '${chalk.bold('master')}', auto checkout to master`;
+          const warningCopy = `[warning] new project branch should be forked by branch '${chalk.bold(MASTER_NAME)}', auto checkout to ${MASTER_NAME} and pull latest code`;
 
-          console.log(chalk.yellow(warning_copy));
+          console.log(chalk.yellow(warningCopy));
 
-          cmdScript = `${CMD_CHECKOUT_MASTER} && ${cmdScript}`;
+          cmdScript = `${CMD_CHECKOUT_MASTER} ${MASTER_NAME} && ${CMD_PULL_MASTER} ${MASTER_NAME} && ${cmdScript}`;
         }
 
         exec(cmdScript, (...args) => {
@@ -52,15 +53,17 @@ commander
 
           console.log(output);
         });
-      })
+      });
   });
 
 // delete a formal branch
 commander
   .command('delete [name]')
   .description(DESC_DELETE)
-  .action((...args) => {
-    const name = args[0];
+  .option('-m, --master [branch]', 'master branch name, master as default')
+  .action((name, options) => {
+    const MASTER_NAME = options.master || 'master';
+
     if (!name) {
       console.error(chalk.red(`[error]: lack of project name`));
       return;
@@ -94,7 +97,7 @@ commander
               let deleteBranchCmd = `git push -d origin ${target} && git branch -D ${target}`;
 
               if (isCurrent) {
-                deleteBranchCmd = `${CMD_CHECKOUT_MASTER} && ${deleteBranchCmd}`;
+                deleteBranchCmd = `${CMD_CHECKOUT_MASTER} ${MASTER_NAME} && ${deleteBranchCmd}`;
               }
 
               const dateObj = utils.getFormatDateObj();
@@ -103,29 +106,29 @@ commander
               let tagName = `tags/${_name}_${dateObj.year}-${dateObj.month}-${dateObj.day}_${dateObj.timeStamp}`;
               const createTagCmd = `git tag ${tagName} && git push origin ${tagName}`;
 
-              co(function () {
-                return new Promise((res, rej) => {
-                  exec(deleteBranchCmd, err => {
-                    if (err) {
-                      rej(err);
-                    }
+              const deletePromise = new Promise((res, rej) => {
+                exec(deleteBranchCmd, err => {
+                  if (err) {
+                    rej(err);
+                  }
 
-                    res();
-                  });
-                })
-              }).then(function () {
-                return new Promise((res, rej) => {
+                  res();
+                });
+              });
+
+              deletePromise
+                .then(function () {
                   exec(createTagCmd, (err) => {
                     if (err) {
-                      rej(err);
+                      Promise.reject(err);
                     }
 
                     console.log(chalk.yellow('delete branch and create a new tag'));
                   });
                 })
-              }).catch(err => {
-                console.log(chalk.red(err.stack));
-              })
+                .catch(err => {
+                  console.log(chalk.red(err.stack));
+                });
             });
 
           return;
@@ -157,8 +160,8 @@ commander
         console.log(chalk.yellow('clean done'));
       })
       .catch((err) => {
-      console.log(chalk.red(err.stack));
-    });
+        console.log(chalk.red(err.stack));
+      });
   });
 
 
